@@ -1,0 +1,118 @@
+MyData <- read.csv("E:/BrainStroke.csv", header=TRUE,sep=",")
+options(max.print=9999)
+MyData
+
+convertCategoricalToNumeric <- function(MyData)
+{
+  categorical_cols <- c("gender", "ever_married", "work_type", "Residence_type", "smoking_status")
+  for(col in categorical_cols)
+  {
+    MyData[[col]] <- as.numeric(factor(MyData[[col]]))
+  }
+  return(MyData)
+}
+MyData <- convertCategoricalToNumeric(MyData)
+MyData
+
+colSums(is.na(MyData))
+
+z_scores <- scale(MyData$age)
+age_outlier_indices <- which(abs(z_scores) > 2)
+age_outlier_values <- MyData$age[age_outlier_indices]
+age_outlier_values
+
+MyData$age[age_outlier_indices] <- NA
+MyData
+
+
+which(is.na(MyData$age))
+
+
+
+most_frequent_age <- names(which.max(table(MyData$age)))
+MyData$age[is.na(MyData$age)] <- most_frequent_age
+most_frequent_age
+
+myFrequencyAgeData = MyData
+myFrequencyAgeData
+
+
+MyData$age <- as.numeric(MyData$age)
+MyData$stroke <- as.numeric(MyData$stroke)
+MyData
+
+names(MyData)
+class(MyData$age)
+class(MyData$stroke)
+
+MyData2 <-data.frame(ageRelation = MyData$age, strokeRelatrion = MyData$stroke )
+MyData2
+
+correlation_coefficient <- cor(MyData2$ageRelation, MyData2$strokeRelatrion)
+correlation_coefficient
+
+correlation_matrix <- round(cor(MyData, method = "pearson"),digits = 2)
+correlation_matrix
+
+install.packages("corrplot")
+library(corrplot)
+corrplot(correlation_matrix, method = "color")
+corrplot
+
+install.packages("class")
+library(class)
+
+train_data <- MyData[c("age", "stroke")]
+test_data <- data.frame(age = MyData$age, stroke = MyData$stroke)
+k <- 3
+knn_pred <- knn(train = train_data, test = test_data, cl = MyData$stroke, k = k)
+knn_pred
+
+
+install.packages("caTools")
+library(caTools)
+
+split <- sample.split(myFrequencyAgeData$stroke, SplitRatio = 0.8)
+
+
+train_data <- myFrequencyAgeData[split, ]
+nrow(train_data)
+test_data <- myFrequencyAgeData[!split, ]
+nrow(test_data)
+
+
+num_folds <- 10
+
+fold_indices <- sample(1:num_folds, size = nrow(MyData), replace = TRUE)
+fold_indices
+
+
+for (fold in 1:num_folds) {
+  train_indices <- which(fold_indices != fold)
+  test_indices <- which(fold_indices == fold)
+  
+  train_data <- MyData[train_indices, c("age", "stroke")]
+  test_data <- MyData[test_indices, c("age", "stroke")]
+  
+  knn_pred <- knn(train = train_data, test = test_data, cl = MyData$stroke[train_indices], k = k)
+  
+  correct_predictions <- sum(knn_pred == MyData$stroke[test_indices])
+  total_predictions <- length(test_indices)
+  
+  accuracy_scores[fold] <- correct_predictions / total_predictions
+}
+accuracy_scores
+
+
+install.packages("caret")
+library(caret)
+
+
+conf_matrix <- table(Actual = test_data$stroke, Predicted = knn_pred)
+conf_matrix
+
+
+precision <- conf_matrix[2, 2] / sum(conf_matrix[, 2])
+precision
+recall <- conf_matrix[2, 2] / sum(conf_matrix[2, ])
+recall
